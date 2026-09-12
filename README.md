@@ -1,6 +1,6 @@
 # vLLM 서빙 파라미터 튜닝 벤치마크
 
-Colab T4 GPU에서 vLLM(TinyLlama-1.1B)을 직접 띄워 **동시성에 따른 연속 배칭(continuous batching) 처리량**과 **Prefix Caching의 TTFT 단축 효과**를 실측한 벤치마크입니다.
+Colab T4 GPU에서 vLLM(TinyLlama-1.1B)을 직접 띄워 **동시성에 따른 연속 배칭(continuous batching) 처리량**, **Prefix Caching의 TTFT 단축 효과**, **GPU 커널 레벨 프로파일링(H2D/D2H 포함)**을 실측한 벤치마크입니다.
 
 노트북: [`vllm_serving_tuning_benchmark.ipynb`](vllm_serving_tuning_benchmark.ipynb) (Colab에서 그대로 열어 재현 가능)
 
@@ -48,6 +48,28 @@ flowchart LR
 | warm 2 (캐시 히트) | 0.135s | **1.53배** 빠름 |
 
 TinyLlama-1.1B + 짧은 prefix 기준으로도 1.5~1.65배 단축을 확인. 더 큰 모델/더 긴 공유 prefix(예: RAG의 긴 시스템 프롬프트, few-shot 예시)일수록 이 효과는 훨씬 커짐 — prefill 연산량 자체가 스킵되기 때문.
+
+## 실험 3 — GPU 프로파일링: H2D/D2H 복사가 실제로 병목인가?
+
+```mermaid
+flowchart LR
+    W["워밍업 1회<br/>(CUDA 컨텍스트/캐시 안정화)"] --> P["torch.profiler로<br/>batch=8, 32토큰 생성 1회 감싸기"]
+    P --> T["key_averages().table(sort_by=cuda_time_total)"]
+    T --> M["Memcpy HtoD / DtoH 행만 추출"]
+```
+
+`torch.profiler`로 `ProfilerActivity.CPU`+`CUDA`를 함께 켜고, batch=8·32토큰 생성 1회를 감싸서 커널별 Self CUDA 시간을 전부 뜯어봤습니다.
+
+| 커널 | Self CUDA 시간 | 전체 대비 |
+|---|---|---|
+| `cutlass::Kernel2<...wmma_tensorop_f16...>` (GEMM) | 296.110ms | **85.7%** |
+| **Memcpy HtoD (Pinned → Device)** | 132.223**μs** | 0.038% |
+| **Memcpy DtoH (Device → Pinned)** | 89.789**μs** | 0.026% |
+| Self CUDA 시간 합계 | 345.509ms | 100% |
+
+**핵심 발견**: 이 설정(단일 GPU, batch=8, 짧은 시퀀스)에서는 H2D+D2H 복사 시간을 다 합쳐도 전체 GPU 시간의 **0.064%**밖에 안 됩니다 — GEMM 커널 하나(85.7%)에 비하면 사실상 무시할 수 있는 수준. `run_vllm_on_colab.ipynb`에서 찾은 GEMV 병목(실험 1의 배경)과 같은 결이지만, 이번엔 "H2D/D2H가 병목일 것"이라는 가설 자체를 직접 반증한 케이스입니다.
+
+**왜 이런 결과가 나왔는가 (그리고 언제는 달라지는가)**: 이 벤치마크는 입출력이 전부 GPU 메모리 안에서 끝나는 단일 GPU·오프라인 배치라, 호스트↔디바이스 전송이 토큰 ID/샘플링 결과 같은 작은 텐서 몇 개뿐입니다. H2D/D2H가 실제로 유의미한 비중을 차지하는 상황은 오히려 (1) Prefill-Decode 분리 서빙에서 노드 간 KV 캐시 전송, (2) CPU 오프로딩(KV cache나 가중치를 CPU로 내렸다 올리는 경우), (3) 멀티모달 입력(이미지 텐서를 매 요청마다 새로 업로드)처럼 **호스트-디바이스 경계를 실제로 넘나드는 아키텍처**일 때입니다 — 이런 경우엔 이번 실험과 반대로 동기화 구간 자체가 병목이 될 수 있어, 프로파일링 없이 "H2D/D2H가 문제"라고 짐작하는 것과 실제로 숫자를 재보는 것의 차이를 보여주는 사례로 남겨뒀습니다.
 
 ## 재현 방법
 1. Colab에서 [`vllm_serving_tuning_benchmark.ipynb`](vllm_serving_tuning_benchmark.ipynb) 열기
