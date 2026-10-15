@@ -1,0 +1,9 @@
+{
+  "device": "NVIDIA GeForce RTX 3060 Ti",
+  "copy_gbps_runs": [
+    349.1,
+    348.1,
+    351.6
+  ],
+  "copy_gbps": 349.1
+}

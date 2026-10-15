@@ -1,0 +1,105 @@
+{
+  "eager": true,
+  "weights_read_gb": 2.069,
+  "kv_bytes_per_token": 22528,
+  "prompt_len": 32,
+  "out_tokens": 256,
+  "rows": [
+    {
+      "batch": 1,
+      "step_ms": 14.423,
+      "step_ms_runs": [
+        14.031,
+        16.131,
+        14.423
+      ],
+      "tok_per_s": 69.3,
+      "bytes_per_step_gb": 2.0726,
+      "eff_gbps": 143.7
+    },
+    {
+      "batch": 2,
+      "step_ms": 15.848,
+      "step_ms_runs": [
+        15.703,
+        15.848,
+        16.059
+      ],
+      "tok_per_s": 126.2,
+      "bytes_per_step_gb": 2.0762,
+      "eff_gbps": 131.0
+    },
+    {
+      "batch": 4,
+      "step_ms": 16.404,
+      "step_ms_runs": [
+        15.626,
+        16.404,
+        16.471
+      ],
+      "tok_per_s": 243.8,
+      "bytes_per_step_gb": 2.0834,
+      "eff_gbps": 127.0
+    },
+    {
+      "batch": 8,
+      "step_ms": 15.864,
+      "step_ms_runs": [
+        16.107,
+        15.803,
+        15.864
+      ],
+      "tok_per_s": 504.3,
+      "bytes_per_step_gb": 2.0979,
+      "eff_gbps": 132.2
+    },
+    {
+      "batch": 16,
+      "step_ms": 17.087,
+      "step_ms_runs": [
+        17.087,
+        17.838,
+        15.975
+      ],
+      "tok_per_s": 936.4,
+      "bytes_per_step_gb": 2.1267,
+      "eff_gbps": 124.5
+    },
+    {
+      "batch": 32,
+      "step_ms": 16.715,
+      "step_ms_runs": [
+        18.969,
+        16.715,
+        16.688
+      ],
+      "tok_per_s": 1914.4,
+      "bytes_per_step_gb": 2.1844,
+      "eff_gbps": 130.7
+    },
+    {
+      "batch": 64,
+      "step_ms": 16.699,
+      "step_ms_runs": [
+        16.675,
+        16.699,
+        17.427
+      ],
+      "tok_per_s": 3832.6,
+      "bytes_per_step_gb": 2.2997,
+      "eff_gbps": 137.7
+    },
+    {
+      "batch": 128,
+      "step_ms": 21.11,
+      "step_ms_runs": [
+        21.201,
+        21.1,
+        21.11
+      ],
+      "tok_per_s": 6063.6,
+      "bytes_per_step_gb": 2.5304,
+      "eff_gbps": 119.9
+    }
+  ]
+}
