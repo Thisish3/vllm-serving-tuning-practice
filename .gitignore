@@ -1,0 +1,5 @@
+__pycache__/
+*.nsys-rep
+*.ncu-rep
+*.ncu-repz
+*.pt.trace.json.gz

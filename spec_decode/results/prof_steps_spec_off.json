@@ -1,0 +1,80 @@
+{
+ "trace": "1793664174514407481-rank-0.1793664210203348367.pt.trace.json.gz",
+ "steps": 256,
+ "gpu_window_us": 2767333.5,
+ "gpu_busy_us": 2198919.8,
+ "kernel_time_us": 2202587.5,
+ "decode_steps": {
+  "kernels_per_step": {
+   "median": 405,
+   "min": 405,
+   "max": 405
+  },
+  "kernels_per_step_distinct_values": [
+   [
+    405,
+    255
+   ]
+  ],
+  "span_us": {
+   "median": 9078.53,
+   "min": 8982.53,
+   "max": 10321.02
+  },
+  "busy_us": {
+   "median": 8524.02,
+   "min": 8511.06,
+   "max": 9265.14
+  },
+  "idle_in_step_us": {
+   "median": 544.46,
+   "min": 462.38,
+   "max": 1798.06
+  },
+  "gap_before_us": {
+   "median": 1575.17,
+   "min": 1288.53,
+   "max": 3831.68
+  }
+ },
+ "prefill_step": {
+  "kernels": 293,
+  "memcpy": 10,
+  "span_us": 12465.9,
+  "busy_us": 9946.4,
+  "idle_in_step_us": 2519.5,
+  "gap_before_us": null
+ },
+ "top5_kernels": [
+  {
+   "name": "void gemv2T_kernel_val<int, int, __half, __half, __half, float, 128, 16, 4, 4, false, false, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float>, float, float)",
+   "calls": 7396,
+   "total_us": 1232737.9,
+   "pct_of_kernel_time": 56.0
+  },
+  {
+   "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2_tn_align8>(cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2_tn_align8::Params)",
+   "calls": 14280,
+   "total_us": 609635.9,
+   "pct_of_kernel_time": 27.7
+  },
+  {
+   "name": "void gemv2T_kernel_val<int, int, __half, __half, __half, float, 128, 16, 4, 4, false, true, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half const>, cublasGemvTensorStridedBatched<__half>, float>, float, float)",
+   "calls": 7140,
+   "total_us": 127315.1,
+   "pct_of_kernel_time": 5.8
+  },
+  {
+   "name": "void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<128, 64, 128, 4, false, false, cutlass::half_t, Flash_kernel_traits<128, 64, 128, 4, cutlass::half_t> >, false, false, false, false, true, false, true, false>(flash::Flash_fwd_params)",
+   "calls": 7140,
+   "total_us": 68008.5,
+   "pct_of_kernel_time": 3.1
+  },
+  {
+   "name": "void flash::flash_fwd_splitkv_combine_kernel<Flash_fwd_kernel_traits<128, 64, 128, 4, false, false, cutlass::half_t, Flash_kernel_traits<128, 64, 128, 4, cutlass::half_t> >, 4, 5, true>(flash::Flash_fwd_params)",
+   "calls": 7140,
+   "total_us": 54226.7,
+   "pct_of_kernel_time": 2.5
+  }
+ ]
+}

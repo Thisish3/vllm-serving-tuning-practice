@@ -1,0 +1,80 @@
+{
+ "trace": "1793664230271419356-rank-0.1793664263595421736.pt.trace.json.gz",
+ "steps": 54,
+ "gpu_window_us": 664055.3,
+ "gpu_busy_us": 535846.5,
+ "kernel_time_us": 535600.8,
+ "decode_steps": {
+  "kernels_per_step": {
+   "median": 300,
+   "min": 300,
+   "max": 300
+  },
+  "kernels_per_step_distinct_values": [
+   [
+    300,
+    53
+   ]
+  ],
+  "span_us": {
+   "median": 10069.39,
+   "min": 9901.7,
+   "max": 11740.77
+  },
+  "busy_us": {
+   "median": 9853.04,
+   "min": 9690.27,
+   "max": 10590.85
+  },
+  "idle_in_step_us": {
+   "median": 221.12,
+   "min": 205.09,
+   "max": 1299.27
+  },
+  "gap_before_us": {
+   "median": 2150.61,
+   "min": 1821.44,
+   "max": 2894.23
+  }
+ },
+ "prefill_step": {
+  "kernels": 290,
+  "memcpy": 7,
+  "span_us": 10239.0,
+  "busy_us": 9724.8,
+  "idle_in_step_us": 514.2,
+  "gap_before_us": null
+ },
+ "top5_kernels": [
+  {
+   "name": "void cutlass::Kernel2<cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x10_tn_align8>(cutlass_80_tensorop_f16_s16816gemm_relu_f16_64x64_32x10_tn_align8::Params)",
+   "calls": 1512,
+   "total_us": 217719.9,
+   "pct_of_kernel_time": 40.6
+  },
+  {
+   "name": "ampere_fp16_s16816gemm_fp16_128x64_ldg8_f2f_stages_64x3_tn",
+   "calls": 1512,
+   "total_us": 115211.9,
+   "pct_of_kernel_time": 21.5
+  },
+  {
+   "name": "void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<128, 64, 128, 4, false, false, cutlass::half_t, Flash_kernel_traits<128, 64, 128, 4, cutlass::half_t> >, true, false, false, false, true, false, false, false>(flash::Flash_fwd_params)",
+   "calls": 1512,
+   "total_us": 69850.6,
+   "pct_of_kernel_time": 13.0
+  },
+  {
+   "name": "ampere_fp16_s16816gemm_fp16_64x64_ldg8_f2f_stages_64x6_tn",
+   "calls": 53,
+   "total_us": 60091.1,
+   "pct_of_kernel_time": 11.2
+  },
+  {
+   "name": "ampere_fp16_s16816gemm_fp16_64x64_sliced1x2_ldg8_relu_f2f_stages_64x6_tn",
+   "calls": 1512,
+   "total_us": 30649.0,
+   "pct_of_kernel_time": 5.7
+  }
+ ]
+}

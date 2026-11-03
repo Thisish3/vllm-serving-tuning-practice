@@ -1,0 +1,148 @@
+{
+ "gpu": "NVIDIA GeForce RTX 3060 Ti",
+ "torch": "2.9.0+cu128",
+ "torch_cuda": "12.8",
+ "vllm": "0.11.2",
+ "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+ "model_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+ "llm_args": {
+  "gpu_memory_utilization": 0.85,
+  "max_model_len": 2048,
+  "enable_prefix_caching": true
+ },
+ "sampling": {
+  "temperature": 0.0,
+  "max_tokens": 128,
+  "min_tokens": 128
+ },
+ "rounds": 5,
+ "note": "rounds run back to back in one process; round 0 is the first generate after model load, as in the notebook",
+ "results": [
+  {
+   "n": 1,
+   "out_tokens": 128,
+   "time_s_runs": [
+    0.979,
+    0.968,
+    0.962,
+    0.963,
+    0.966
+   ],
+   "time_s_median": 0.966,
+   "tok_s_runs": [
+    130.8,
+    132.2,
+    133.0,
+    133.0,
+    132.5
+   ],
+   "tok_s_median": 132.5,
+   "latency_per_req_s_median": 0.966
+  },
+  {
+   "n": 2,
+   "out_tokens": 256,
+   "time_s_runs": [
+    0.971,
+    0.973,
+    0.969,
+    0.967,
+    0.97
+   ],
+   "time_s_median": 0.97,
+   "tok_s_runs": [
+    263.8,
+    263.1,
+    264.3,
+    264.8,
+    264.0
+   ],
+   "tok_s_median": 264.0,
+   "latency_per_req_s_median": 0.485
+  },
+  {
+   "n": 4,
+   "out_tokens": 512,
+   "time_s_runs": [
+    0.976,
+    0.972,
+    0.973,
+    0.976,
+    0.979
+   ],
+   "time_s_median": 0.976,
+   "tok_s_runs": [
+    524.6,
+    526.8,
+    526.0,
+    524.8,
+    523.1
+   ],
+   "tok_s_median": 524.8,
+   "latency_per_req_s_median": 0.244
+  },
+  {
+   "n": 8,
+   "out_tokens": 1024,
+   "time_s_runs": [
+    1.022,
+    1.017,
+    1.017,
+    1.018,
+    1.021
+   ],
+   "time_s_median": 1.018,
+   "tok_s_runs": [
+    1002.0,
+    1006.5,
+    1006.7,
+    1006.2,
+    1003.2
+   ],
+   "tok_s_median": 1006.2,
+   "latency_per_req_s_median": 0.127
+  },
+  {
+   "n": 16,
+   "out_tokens": 2048,
+   "time_s_runs": [
+    1.075,
+    1.091,
+    1.074,
+    1.071,
+    1.073
+   ],
+   "time_s_median": 1.074,
+   "tok_s_runs": [
+    1905.8,
+    1877.1,
+    1907.1,
+    1911.6,
+    1907.8
+   ],
+   "tok_s_median": 1907.1,
+   "latency_per_req_s_median": 0.067
+  },
+  {
+   "n": 30,
+   "out_tokens": 3840,
+   "time_s_runs": [
+    1.36,
+    1.353,
+    1.352,
+    1.366,
+    1.352
+   ],
+   "time_s_median": 1.353,
+   "tok_s_runs": [
+    2824.3,
+    2838.0,
+    2841.3,
+    2810.7,
+    2839.4
+   ],
+   "tok_s_median": 2838.0,
+   "latency_per_req_s_median": 0.045
+  }
+ ]
+}

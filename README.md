@@ -27,6 +27,56 @@ flowchart LR
 
 **핵심 관찰**: 동시 요청을 1개→30개(30배)로 늘려도 총 처리 시간은 2.03s→2.26s(1.1배)만 증가. 처리량은 63.2 → 1696.6 tok/s로 **약 26.8배** 증가하면서 요청당 평균 지연은 오히려 27배 감소(2.03s → 0.075s). vLLM의 연속 배칭이 GPU를 유휴 없이 채워 쓰기 때문 — 배치가 작을 때는 디코딩이 GEMV(memory-bandwidth-bound)라 GPU 연산 능력이 낭비되고, 배치를 키우면 같은 가중치 읽기를 여러 요청이 나눠 쓰면서 사실상 GEMM에 가까워짐.
 
+### RTX 3060 Ti 재측정 ([`continuous_batching/`](continuous_batching/))
+
+위 T4 표와 같은 코드(노트북 셀 3~5의 `LLM(...)`, `SamplingParams`, 프롬프트 30개, `run_batch`)를 [`exp1.py`](continuous_batching/exp1.py)로 옮겨 로컬 GPU에서 다시 쟀습니다.
+노트북의 n 루프를 한 프로세스 안에서 5번 반복했고, 표는 5회 중앙값입니다.
+
+- 환경: RTX 3060 Ti 8GB, 드라이버 581.80(CUDA 13.0), WSL2 Ubuntu 22.04, vLLM 0.11.2 + torch 2.9.0+cu128 (pip venv). `VLLM_ENABLE_V1_MULTIPROCESSING=0`은 노트북과 같습니다.
+- 모델: `TinyLlama/TinyLlama-1.1B-Chat-v1.0` revision `fe8a4ea1ffedaf415f4da2f062534de366a451e6`. dtype을 지정하지 않았고, 이 GPU에서는 bf16 커널(`__nv_bfloat16`)로 실행됐습니다. T4 실행의 dtype은 기록이 없습니다.
+- 노트북 셀 2의 libcudart 미리 로드(Colab 우회 코드)는 넣지 않았습니다.
+
+| n | 총 시간 (중앙값) | 총 시간 5회 | 처리량 (중앙값) | 처리량 5회 | 총 시간 / n |
+|---|---|---|---|---|---|
+| 1 | 0.966s | 0.979, 0.968, 0.962, 0.963, 0.966 | 132.5 tok/s | 130.8, 132.2, 133.0, 133.0, 132.5 | 0.966s |
+| 2 | 0.970s | 0.971, 0.973, 0.969, 0.967, 0.970 | 264.0 tok/s | 263.8, 263.1, 264.3, 264.8, 264.0 | 0.485s |
+| 4 | 0.976s | 0.976, 0.972, 0.973, 0.976, 0.979 | 524.8 tok/s | 524.6, 526.8, 526.0, 524.8, 523.1 | 0.244s |
+| 8 | 1.018s | 1.022, 1.017, 1.017, 1.018, 1.021 | 1,006.2 tok/s | 1002.0, 1006.5, 1006.7, 1006.2, 1003.2 | 0.127s |
+| 16 | 1.074s | 1.075, 1.091, 1.074, 1.071, 1.073 | 1,907.1 tok/s | 1905.8, 1877.1, 1907.1, 1911.6, 1907.8 | 0.067s |
+| 30 | 1.353s | 1.360, 1.353, 1.352, 1.366, 1.352 | 2,838.0 tok/s | 2824.3, 2838.0, 2841.3, 2810.7, 2839.4 | 0.045s |
+
+| 비교 | T4 (기존 값) | RTX 3060 Ti (이번 값) |
+|---|---|---|
+| n=1 처리량 | 63.2 tok/s | 132.5 tok/s |
+| n=30 처리량 | 1,696.6 tok/s | 2,838.0 tok/s |
+| n=1 → 30 처리량 배율 | 26.8배 | 21.4배 |
+| n=1 → 30 총 시간 배율 | 1.11배 (2.03 → 2.26s) | 1.40배 (0.966 → 1.353s) |
+
+"총 시간 / n" 열은 노트북의 `avg_latency/req` 정의(전체 시간 ÷ 요청 수)를 그대로 쓴 값입니다. 요청 하나가 끝날 때까지 걸린 시간은 아닙니다.
+
+**프로파일러로 본 디코드 스텝 (n=1, n=30)** — 원인 확인용이며 시간은 대표 수치가 아닙니다.
+
+Nsight Systems(2023.2.3, 2025.6.3, 2026.3.2)는 이 WSL2 환경에서 CUDA API 호출만 기록하고 GPU 커널은 기록하지 않았습니다.
+행렬곱 10번짜리 최소 예제에서도 `SKIPPED: … does not contain CUDA kernel data.`였고, 진단 메시지는 `CUDA hardware tracing is not supported on this system. A legacy (software instrumented) trace was collected instead.`였습니다. 원인은 확인하지 못했습니다.
+그래서 vLLM 내장 torch.profiler(`VLLM_TORCH_PROFILER_DIR`, `llm.start_profile()`)로 측정한 `generate` 한 번을 잡았습니다.
+스텝은 샘플링된 토큰을 호스트로 복사하는 `Memcpy DtoH`를 끝으로 나눴습니다([`prof_steps.py`](prof_steps.py), 결과 [`continuous_batching/results/`](continuous_batching/results/)).
+트레이스의 DtoH 복사 수는 n=1, n=30 모두 128개로 생성 토큰 수(=스텝 수)와 같았습니다.
+
+| | n=1 | n=30 |
+|---|---|---|
+| 스텝 수 (첫 스텝은 prefill 포함) | 128 | 128 |
+| 디코드 스텝당 커널 수 | 299 (127스텝 모두) | 299 (127스텝 모두) |
+| 디코드 스텝 GPU busy (중앙값) | 6.03ms | 8.02ms |
+| 스텝 안 GPU 유휴 (중앙값) | 0.49ms | 1.20ms |
+| 스텝 사이 GPU 유휴 (이전 DtoH 끝 → 다음 GPU 작업, 중앙값) | 1.26ms | 1.44ms |
+| 프로파일러 켠 상태의 generate 시간 | 1.024s | 1.436s |
+
+커널 시간 상위 5개 (측정한 generate 전체, 커널 시간 합 대비)
+- n=1: `gemv2T_kernel_val<…bf16…, 128, 16, 4, 4…>` 45.4%, `cutlass … wmma_tensorop_bf16 … 16x16_128x2` 24.0%, `gemv2T_kernel_val<…, 128, 16, 2, 4…>` 20.1%, `flash_fwd_splitkv_kernel` 3.3%, `flash_fwd_splitkv_combine_kernel` 1.6%
+- n=30: `cutlass … tensorop_bf16_s16816gemm_relu_bf16_128x64_32x6` 36.5%, `ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_64x4_tn` 25.6%, `ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_32x6_tn` 14.2%, `flash_fwd_splitkv_kernel` 8.2%, `ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_f2f_stages_64x6_tn` 6.8%
+
+vLLM은 실행 중 `Using 'pin_memory=False' as WSL is detected. This may slow down the performance.` 경고를 냈고, 트레이스의 HtoD 복사는 모두 `Pageable -> Device`였습니다.
+
 ### 발견한 문제: max_tokens만으로는 벤치마크가 왜곡됨
 처음에는 `SamplingParams(temperature=0.0, max_tokens=128)`만 설정했는데, 결과가 `out_tokens == n`(요청마다 정확히 1토큰)으로 나왔습니다. 원인: TinyLlama-Chat 모델에 채팅 템플릿 없이 raw completion 프롬프트를 넣으면 모델이 즉시 EOS에 가까운 토큰을 생성해버려 거의 모든 요청이 1토큰 만에 종료됨 — 처리량이 아니라 요청 오버헤드만 재는 셈이 됨. `min_tokens=128`을 추가해 EOS를 무시하고 강제로 끝까지 생성하도록 고쳐서 실제 디코딩 처리량을 측정할 수 있었습니다.
 
@@ -144,8 +194,24 @@ flowchart LR
 
 코드와 원본: [`decode_bandwidth/`](decode_bandwidth/) — [`bw.py`](decode_bandwidth/bw.py)(측정), [`run.sh`](decode_bandwidth/run.sh)(k3s containerd에서 `vllm/vllm-openai:v0.11.2` 이미지로 실행), [`results/`](decode_bandwidth/results/)(JSON).
 
+## 실험 6 — n-gram speculative decoding 켜기/끄기 (RTX 3060 Ti)
+
+Qwen2.5-1.5B-Instruct(fp16), 배치 1, `temperature=0`, `max_tokens=min_tokens=256`, 프롬프트마다 5회.
+`speculative_config={"method": "ngram", "num_speculative_tokens": 4, "prompt_lookup_max": 4, "prompt_lookup_min": 2}`.
+설정 키 확인 위치, 매회 값, 프로파일러 결과는 [`spec_decode/README.md`](spec_decode/README.md)에 있습니다.
+
+| 워크로드 | off (tok/s, 중앙값) | ngram (tok/s, 중앙값) | 배율 | 수락률 | greedy 출력 동일 |
+|---|---|---|---|---|---|
+| 복사 (코드 파일 다시 쓰기) | 98.3 | 396.5 | 4.03배 | 96.2% | 예 |
+| 대화 1 | 98.8 | 93.8 | 0.95배 | 14.1% | 예 |
+| 대화 2 | 98.7 | 103.3 | 1.05배 | 21.5% | 예 |
+| 대화 3 | 98.6 | 95.4 | 0.97배 | 15.5% | 예 |
+
+`VLLM_ENABLE_V1_MULTIPROCESSING=0`(실험 1 노트북 설정)에서는 n-gram proposer가 매 스텝 draft를 만들었지만 스케줄러 카운터가 0이었고 속도도 off보다 느렸습니다. 원인은 확인하지 못했고, 위 표는 기본값(1)으로 쟀습니다.
+
 ## 재현 방법
 실험 1~4는 Colab, 실험 5는 로컬 GPU에서 `decode_bandwidth/run.sh`로 실행했습니다.
+실험 1의 RTX 3060 Ti 재측정과 실험 6은 WSL2의 pip venv(vLLM 0.11.2)에서 `continuous_batching/exp1.py`, `spec_decode/spec.py`로 실행했습니다.
 
 1. Colab에서 [`vllm_serving_tuning_benchmark.ipynb`](vllm_serving_tuning_benchmark.ipynb) 열기
 2. 런타임 > 런타임 유형 변경 > **T4 GPU**
