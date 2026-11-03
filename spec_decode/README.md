@@ -39,7 +39,11 @@ tok/s = 256 ÷ `generate` 한 번의 벽시계 시간(prefill 포함), ms/token 
    그때 ngram이 off보다 약 9% 느렸고(복사 99.8 → 90.4 tok/s), 수락 카운터가 모두 0이었습니다.
    [`debug_metrics.py`](debug_metrics.py)로 `NgramProposer.propose`를 감싸 세어 보니, 256토큰 생성 동안 256번 호출돼 매번 draft 4개(총 1,024개)를 돌려줬습니다.
    그런데 `vllm:spec_decode_num_drafts`는 0이었습니다. 같은 스크립트를 기본값(1)으로 돌리면 draft 210개 중 202개가 수락됐습니다.
-   원인은 확인하지 못했습니다. 위 표는 off/ngram 모두 기본값(1)으로 잰 값입니다.
+   v0.11.2 코드에서는 draft 토큰을 스케줄러에 넘기는 `EngineCore.post_step()`을 `EngineCoreProc` 경로에서만 부르고,
+   `VLLM_ENABLE_V1_MULTIPROCESSING=0`일 때 쓰는 `InprocClient.get_output()`은 `step_fn()`만 부릅니다
+   ([core_client.py#L266-L268](https://github.com/vllm-project/vllm/blob/v0.11.2/vllm/v1/engine/core_client.py#L266-L268)).
+   이 문제는 [vllm#30319](https://github.com/vllm-project/vllm/pull/30319)(2025-12-18 머지, v0.14.0부터 포함)로 이미 고쳐졌고,
+   PR의 수정 전 출력도 `num_drafts: 0`이었습니다. 위 표는 off/ngram 모두 기본값(1)으로 잰 값입니다.
 2. spec decode를 켜면 vLLM이 `min_p, logit_bias, and min_tokens parameters won't currently work with speculative decoding enabled.` 경고를 냅니다
    (`vllm/v1/sample/logits_processor/__init__.py` 205행, spec 설정이 있으면 내장 logits processor를 만들지 않음).
    이번 측정에서는 ngram 쪽 출력도 매번 256토큰이었고 off와 토큰이 같았습니다.
